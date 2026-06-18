@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Geometry Game — Plataforma Rítmica</title>
+<meta name="description" content="Jogo de plataforma 2D em que um quadrado salta sobre obstáculos no ritmo da música. Projeto original inspirado em jogos do gênero rhythm-platformer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD durante o jogo -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <div class="hud-stat"><span class="hud-label">Tentativa</span><span id="hud-attempts">1</span></div>
+      <div class="hud-stat"><span class="hud-label">Melhor</span><span id="hud-best">0%</span></div>
+    </div>
+    <div class="hud-center">
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <span id="hud-percent">0%</span>
+    </div>
+    <div class="hud-right">
+      <button id="btn-mute" class="icon-btn" title="Ativar/desativar som" aria-label="Ativar ou desativar som">🔊</button>
+      <button id="btn-pause" class="icon-btn" title="Pausar (Esc)" aria-label="Pausar">⏸</button>
+    </div>
+  </div>
+
+  <div id="practice-banner" class="banner hidden">MODO DE PRÁTICA — <kbd>C</kbd> ponto de controle · <kbd>X</kbd> remover</div>
+
+  <!-- Tela inicial -->
+  <div id="screen-start" class="screen">
+    <div class="logo-mark" aria-hidden="true">
+      <div class="logo-square"></div>
+    </div>
+    <h1 class="title">GEOMETRY <span>GAME</span></h1>
+    <p class="subtitle">Salte no ritmo. Não bata. Não pare.</p>
+
+    <div class="menu-buttons">
+      <button id="btn-play" class="btn btn-primary">▶ Jogar</button>
+      <button id="btn-practice" class="btn btn-secondary">🛠 Modo de Prática</button>
+    </div>
+
+    <div class="instructions-card">
+      <h2>Como jogar</h2>
+      <ul>
+        <li><kbd>Espaço</kbd> / <kbd>Clique</kbd> / <kbd>Toque</kbd> — pular</li>
+        <li>Evite picos e blocos. Use plataformas amarelas e orbes para saltos extras.</li>
+        <li>Portais coloridos invertem a gravidade ou mudam a velocidade.</li>
+        <li>No <strong>Modo de Prática</strong>: <kbd>C</kbd> cria um ponto de controle, <kbd>X</kbd> remove o último.</li>
+      </ul>
+    </div>
+
+    <p class="disclaimer">Projeto independente e original, inspirado na mecânica de jogos de plataforma rítmicos. Sem vínculo com nenhuma empresa de jogos.</p>
+  </div>
+
+  <!-- Tela de pausa -->
+  <div id="screen-pause" class="screen hidden">
+    <h2 class="title-sm">Pausado</h2>
+    <div class="menu-buttons">
+      <button id="btn-resume" class="btn btn-primary">▶ Continuar</button>
+      <button id="btn-restart-pause" class="btn btn-secondary">⟲ Reiniciar</button>
+      <button id="btn-menu-pause" class="btn btn-secondary">☰ Menu</button>
+    </div>
+  </div>
+
+  <!-- Tela de vitória -->
+  <div id="screen-win" class="screen hidden">
+    <h2 class="title-sm win">Nível Concluído! 🎉</h2>
+    <div class="stats-grid">
+      <div><span class="stat-value" id="win-attempts">0</span><span class="stat-label">tentativas</span></div>
+      <div><span class="stat-value" id="win-time">0s</span><span class="stat-label">tempo</span></div>
+    </div>
+    <div class="menu-buttons">
+      <button id="btn-replay" class="btn btn-primary">⟲ Jogar de novo</button>
+      <button id="btn-menu-win" class="btn btn-secondary">☰ Menu</button>
+    </div>
+  </div>
+
+  <div id="flash" class="flash"></div>
+
+</div>
+
+<script src="js/game.js"></script>
+</body>
+</html>
