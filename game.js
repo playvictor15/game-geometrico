@@ -30,7 +30,6 @@
   function showHud(v) { hudEl.classList.toggle('hidden', !v); }
 
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
 
   // PRNG determinístico (mulberry32) — mesma fase sempre gera o mesmo layout
   function mulberry32(seed) {
@@ -156,7 +155,7 @@
         case 'gap': {
           const w = 95 + rng() * 70;
           obstacles.push({ type: 'gap', x, width: w, side });
-          x += w * 0.4;
+          x += w * 0.55 + 40;
           sinceGravityFlip++;
           break;
         }
@@ -311,7 +310,6 @@
   let triggered = new Set();   // ids de obstáculos já acionados nesta tentativa (portais/pads/orbs)
   let particles = [];
   let runStartTime = 0;
-  let pendingJumpHold = false;
   let lastTime = 0;
   let rafId = null;
 
@@ -376,6 +374,8 @@
     const elapsed = ((performance.now() - runStartTime) / 1000).toFixed(1);
     $('win-attempts').textContent = attempts;
     $('win-time').textContent = elapsed + 's';
+    const hasNext = currentLevel.id + 1 < LEVELS.length;
+    $('btn-next-level').classList.toggle('hidden', !hasNext);
     state = STATE.WIN;
     showHud(false);
     practiceBannerEl.classList.add('hidden');
@@ -757,34 +757,23 @@
         (unlocked
           ? '<span class="level-best">' + (best ? best + '%' : 'Não jogada') + '</span>'
           : '<span class="level-locked">🔒 Conclua a fase anterior</span>');
-      if (unlocked) card.addEventListener('click', () => startLevel(i, false));
+      if (unlocked) {
+        card.addEventListener('click', () => {
+          startLevel(i, practiceModePending);
+          practiceModePending = false;
+        });
+      }
       grid.appendChild(card);
     });
+    $('levels-title').textContent = practiceModePending ? 'Selecione a fase para praticar' : 'Selecione a fase';
   }
 
   /* ---------------------------------------------------------------------
      13. Ligações de UI
      --------------------------------------------------------------------- */
-  $('btn-play').addEventListener('click', goToLevelSelect);
-  $('btn-practice').addEventListener('click', () => {
-    // abre a seleção de fases já em modo de prática
-    practiceModePending = true;
-    goToLevelSelect();
-  });
-
   let practiceModePending = false;
-  // intercepta clique nos cards quando vindo do botão de prática
-  const originalRenderGrid = renderLevelGrid;
-  renderLevelGrid = function () {
-    originalRenderGrid();
-    if (practiceModePending) {
-      document.querySelectorAll('.level-card:not(.locked)').forEach((card, i) => {
-        card.replaceWith(card.cloneNode(true)); // remove listener antigo
-      });
-      const cards = document.querySelectorAll('.level-card:not(.locked)');
-      cards.forEach((card, i) => card.addEventListener('click', () => { startLevel(i, true); practiceModePending = false; }));
-    }
-  };
+  $('btn-play').addEventListener('click', () => { practiceModePending = false; goToLevelSelect(); });
+  $('btn-practice').addEventListener('click', () => { practiceModePending = true; goToLevelSelect(); });
 
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-resume').addEventListener('click', togglePause);
