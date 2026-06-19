@@ -62,6 +62,13 @@
     <p class="disclaimer">Projeto independente e original, inspirado na mecânica de jogos de plataforma rítmicos. Sem vínculo com nenhuma empresa de jogos.</p>
   </div>
 
+  <!-- Tela de seleção de fases -->
+  <div id="screen-levels" class="screen screen-levels hidden">
+    <button id="btn-back-levels" class="icon-btn back-btn" title="Voltar ao menu" aria-label="Voltar ao menu">←</button>
+    <h2 id="levels-title" class="title-sm">Selecione a fase</h2>
+    <div id="level-grid" class="level-grid"></div>
+  </div>
+
   <!-- Tela de pausa -->
   <div id="screen-pause" class="screen hidden">
     <h2 class="title-sm">Pausado</h2>
@@ -80,7 +87,8 @@
       <div><span class="stat-value" id="win-time">0s</span><span class="stat-label">tempo</span></div>
     </div>
     <div class="menu-buttons">
-      <button id="btn-replay" class="btn btn-primary">⟲ Jogar de novo</button>
+      <button id="btn-next-level" class="btn btn-primary">⏭ Próxima Fase</button>
+      <button id="btn-replay" class="btn btn-secondary">⟲ Jogar de novo</button>
       <button id="btn-menu-win" class="btn btn-secondary">☰ Menu</button>
     </div>
   </div>
