@@ -11,21 +11,22 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!-- Tela de login / perfil -->
-<div id="screen-login" class="screen hidden">
-  <div class="logo-mark" aria-hidden="true"><div class="logo-square"></div></div>
-  <h1 class="title-sm">Quem está jogando?</h1>
-  <p class="subtitle">Seu progresso fica salvo neste navegador, por nome.</p>
-  <div id="existing-profiles" class="profile-list"></div>
-  <form id="login-form" class="login-form">
-    <input id="login-name-input" class="text-input" type="text" maxlength="18" placeholder="Digite um nome novo" autocomplete="off">
-    <button type="submit" id="btn-login-start" class="btn btn-primary">▶ Começar</button>
-  </form>
-</div>
-  
+
 <div id="app">
 
   <canvas id="game-canvas"></canvas>
+
+  <!-- Tela de login / perfil -->
+  <div id="screen-login" class="screen hidden">
+    <div class="logo-mark" aria-hidden="true"><div class="logo-square"></div></div>
+    <h1 class="title-sm">Quem está jogando?</h1>
+    <p class="subtitle">Seu progresso fica salvo neste navegador, por nome.</p>
+    <div id="existing-profiles" class="profile-list"></div>
+    <form id="login-form" class="login-form">
+      <input id="login-name-input" class="text-input" type="text" maxlength="18" placeholder="Digite um nome novo" autocomplete="off">
+      <button type="submit" id="btn-login-start" class="btn btn-primary">▶ Começar</button>
+    </form>
+  </div>
 
   <!-- HUD durante o jogo -->
   <div id="hud" class="hidden">
@@ -46,6 +47,12 @@
   </div>
 
   <div id="practice-banner" class="banner hidden">MODO DE PRÁTICA — <kbd>C</kbd> ponto de controle · <kbd>X</kbd> remover</div>
+
+  <div id="player-badge" class="player-badge hidden">
+    <span class="player-badge-icon">●</span>
+    <span id="player-name-label">Jogador</span>
+    <button id="btn-switch-profile" class="link-btn" type="button">Trocar</button>
+  </div>
 
   <!-- Tela inicial -->
   <div id="screen-start" class="screen">
@@ -77,6 +84,11 @@
   <div id="screen-levels" class="screen screen-levels hidden">
     <button id="btn-back-levels" class="icon-btn back-btn" title="Voltar ao menu" aria-label="Voltar ao menu">←</button>
     <h2 id="levels-title" class="title-sm">Selecione a fase</h2>
+    <div class="difficulty-selector" role="tablist" aria-label="Dificuldade">
+      <button class="diff-btn" data-diff="easy" type="button">Fácil</button>
+      <button class="diff-btn active" data-diff="normal" type="button">Normal</button>
+      <button class="diff-btn" data-diff="hard" type="button">Difícil</button>
+    </div>
     <div id="level-grid" class="level-grid"></div>
   </div>
 
