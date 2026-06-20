@@ -14,6 +14,7 @@
   const ctx = canvas.getContext('2d');
 
   const screensEls = {
+    login: $('screen-login'),
     start: $('screen-start'),
     levels: $('screen-levels'),
     pause: $('screen-pause'),
@@ -22,6 +23,7 @@
   const hudEl = $('hud');
   const practiceBannerEl = $('practice-banner');
   const flashEl = $('flash');
+  const playerBadgeEl = $('player-badge');
 
   function showScreen(name) {
     Object.values(screensEls).forEach((s) => s && s.classList.add('hidden'));
@@ -31,7 +33,7 @@
 
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-  // PRNG determinístico (mulberry32) — mesma fase sempre gera o mesmo layout
+  // PRNG determinístico (mulberry32) — mesma fase + dificuldade sempre gera o mesmo layout
   function mulberry32(seed) {
     let s = seed >>> 0;
     return function () {
@@ -81,8 +83,18 @@
   function playerScreenX() { return Math.round(VW * PLAYER_SCREEN_X); }
 
   /* ---------------------------------------------------------------------
-     3. Definição das 10 fases
+     3. Dificuldades, paletas e definição das 10 fases
      --------------------------------------------------------------------- */
+  // cada dificuldade muda a DENSIDADE de obstáculos (em unidades de batida) e a
+  // tolerância da colisão — a fase em si (bpm, velocidade, duração) não muda,
+  // exatamente como as dificuldades de uma mesma música em jogos de ritmo.
+  const DIFFICULTIES = {
+    easy: { label: 'Fácil', order: 0, gapChoices: [2, 2, 2.5, 3, 3, 4], hitboxSpike: 10, hitboxBlock: 8, orbRadius: 34 },
+    normal: { label: 'Normal', order: 1, gapChoices: [1, 1.5, 1.5, 2, 2, 2.5], hitboxSpike: 6, hitboxBlock: 4, orbRadius: 26 },
+    hard: { label: 'Difícil', order: 2, gapChoices: [0.5, 0.5, 1, 1, 1, 1.5], hitboxSpike: 3, hitboxBlock: 2, orbRadius: 20 },
+  };
+  const DIFFICULTY_KEYS = ['easy', 'normal', 'hard'];
+
   const PALETTES = [
     { name: 'Aurora',     bg1: '#0a0d1a', bg2: '#112042', accent: '#2de2e6', accent2: '#7b5cff' },
     { name: 'Plasma',     bg1: '#0a0d1a', bg2: '#1c0f33', accent: '#ff2e92', accent2: '#7b5cff' },
@@ -96,50 +108,62 @@
     { name: 'Singular',   bg1: '#050507', bg2: '#16111f', accent: '#ffffff', accent2: '#ff2e92' },
   ];
 
-  // tipos de obstáculo habilitados, peso relativo, e parâmetros de geração por fase
+  // "bars" = número de compassos de 4 tempos. A duração e a quantidade de
+  // obstáculos de cada fase vêm diretamente disso (mais compassos = mais longa).
   const LEVEL_CONFIGS = [
-    { id: 0, name: 'Primeiros Passos',  bpm: 118, speed: 300, length: 5200, seed: 101, minGap: 230, maxGap: 340,
+    { id: 0, name: 'Primeiros Passos',    bpm: 118, speed: 300, bars: 20, seed: 101,
       types: [{ type: 'spike', w: 6 }, { type: 'gap', w: 2 }], introduces: [] },
-    { id: 1, name: 'Salto Amarelo',     bpm: 122, speed: 315, length: 5600, seed: 202, minGap: 220, maxGap: 330,
+    { id: 1, name: 'Salto Amarelo',       bpm: 122, speed: 315, bars: 22, seed: 202,
       types: [{ type: 'spike', w: 5 }, { type: 'block', w: 2 }, { type: 'gap', w: 2 }, { type: 'pad', w: 2 }], introduces: ['pad'] },
-    { id: 2, name: 'Órbita',            bpm: 126, speed: 330, length: 6000, seed: 303, minGap: 210, maxGap: 320,
+    { id: 2, name: 'Órbita',              bpm: 126, speed: 330, bars: 24, seed: 303,
       types: [{ type: 'spike', w: 4 }, { type: 'block', w: 2 }, { type: 'pad', w: 2 }, { type: 'orb', w: 3 }, { type: 'gap', w: 2 }], introduces: ['orb'] },
-    { id: 3, name: 'Gravidade Zero',    bpm: 128, speed: 340, length: 6200, seed: 404, minGap: 210, maxGap: 310,
+    { id: 3, name: 'Gravidade Zero',      bpm: 128, speed: 340, bars: 26, seed: 404,
       types: [{ type: 'spike', w: 4 }, { type: 'block', w: 2 }, { type: 'pad', w: 1 }, { type: 'orb', w: 2 }, { type: 'gravityPortal', w: 2 }], introduces: ['gravityPortal'] },
-    { id: 4, name: 'Aceleração',        bpm: 132, speed: 355, length: 6400, seed: 505, minGap: 200, maxGap: 300,
+    { id: 4, name: 'Aceleração',          bpm: 132, speed: 355, bars: 28, seed: 505,
       types: [{ type: 'spike', w: 4 }, { type: 'block', w: 2 }, { type: 'orb', w: 2 }, { type: 'gravityPortal', w: 1 }, { type: 'speedPortal', w: 2 }, { type: 'gap', w: 1 }], introduces: ['speedPortal'] },
-    { id: 5, name: 'Labirinto de Blocos', bpm: 135, speed: 365, length: 6800, seed: 606, minGap: 190, maxGap: 280,
+    { id: 5, name: 'Labirinto de Blocos', bpm: 135, speed: 365, bars: 30, seed: 606,
       types: [{ type: 'spike', w: 3 }, { type: 'block', w: 5 }, { type: 'pad', w: 2 }, { type: 'orb', w: 2 }, { type: 'gap', w: 2 }], introduces: [] },
-    { id: 6, name: 'Tempestade',         bpm: 140, speed: 380, length: 7200, seed: 707, minGap: 180, maxGap: 270,
+    { id: 6, name: 'Tempestade',          bpm: 140, speed: 380, bars: 32, seed: 707,
       types: [{ type: 'spike', w: 4 }, { type: 'block', w: 3 }, { type: 'pad', w: 2 }, { type: 'orb', w: 2 }, { type: 'gravityPortal', w: 1 }, { type: 'speedPortal', w: 1 }, { type: 'gap', w: 2 }], introduces: [] },
-    { id: 7, name: 'Inversão Total',     bpm: 144, speed: 395, length: 7400, seed: 808, minGap: 175, maxGap: 260,
+    { id: 7, name: 'Inversão Total',      bpm: 144, speed: 395, bars: 34, seed: 808,
       types: [{ type: 'spike', w: 3 }, { type: 'block', w: 2 }, { type: 'orb', w: 2 }, { type: 'gravityPortal', w: 4 }, { type: 'speedPortal', w: 1 }, { type: 'gap', w: 1 }], introduces: [] },
-    { id: 8, name: 'Precisão',           bpm: 150, speed: 410, length: 7600, seed: 909, minGap: 165, maxGap: 235,
+    { id: 8, name: 'Precisão',            bpm: 150, speed: 410, bars: 36, seed: 909,
       types: [{ type: 'spike', w: 5 }, { type: 'block', w: 3 }, { type: 'pad', w: 1 }, { type: 'orb', w: 2 }, { type: 'gravityPortal', w: 1 }, { type: 'gap', w: 2 }], introduces: [] },
-    { id: 9, name: 'Desafio Final',      bpm: 160, speed: 430, length: 8400, seed: 999, minGap: 160, maxGap: 230,
+    { id: 9, name: 'Desafio Final',       bpm: 160, speed: 430, bars: 40, seed: 999,
       types: [{ type: 'spike', w: 4 }, { type: 'block', w: 3 }, { type: 'pad', w: 2 }, { type: 'orb', w: 3 }, { type: 'gravityPortal', w: 2 }, { type: 'speedPortal', w: 2 }, { type: 'gap', w: 2 }], introduces: [] },
   ];
 
-  function buildLevel(cfg) {
+  // gera os obstáculos de uma fase para uma dificuldade específica.
+  // a posição de cada obstáculo é sempre um múltiplo exato de "pxPerBeat",
+  // então eles caem em cima da batida da trilha sonora (mesmo bpm dos dois).
+  function buildLevel(cfg, diffKey) {
+    const diff = DIFFICULTIES[diffKey];
+    const pxPerBeat = (cfg.speed * 60) / cfg.bpm;
     const rng = mulberry32(cfg.seed);
     const obstacles = [];
-    let x = 760;
-    let gravityDir = 1;
+    const totalBeats = cfg.bars * 4;
+    const lengthPx = totalBeats * pxPerBeat;
+    const endBuffer = pxPerBeat * 3;
 
-    // introdução guiada do primeiro elemento novo desta fase, em posição fixa
-    if (cfg.introduces.includes('pad')) { obstacles.push({ type: 'pad', x: 1100, side: 'floor' }); x = 1260; }
-    if (cfg.introduces.includes('orb')) { obstacles.push({ type: 'orb', x: 1100, side: 'floor' }); x = 1260; }
-    if (cfg.introduces.includes('gravityPortal')) { obstacles.push({ type: 'portalGravity', x: 1100, dir: -1 }); gravityDir = -1; x = 1300; }
-    if (cfg.introduces.includes('speedPortal')) { obstacles.push({ type: 'portalSpeed', x: 1100, mult: 1.35 }); x = 1300; }
+    let gravityDir = 1;
+    let x = pxPerBeat * 6; // compasso de preparação antes do primeiro obstáculo
+
+    if (cfg.introduces.includes('pad')) { obstacles.push({ type: 'pad', x, side: 'floor' }); x += pxPerBeat * 2; }
+    if (cfg.introduces.includes('orb')) { obstacles.push({ type: 'orb', x, side: 'floor' }); x += pxPerBeat * 2; }
+    if (cfg.introduces.includes('gravityPortal')) { obstacles.push({ type: 'portalGravity', x, dir: -1 }); gravityDir = -1; x += pxPerBeat * 2.5; }
+    if (cfg.introduces.includes('speedPortal')) { obstacles.push({ type: 'portalSpeed', x, mult: 1.35 }); x += pxPerBeat * 2.5; }
 
     let sinceGravityFlip = 0;
-    while (x < cfg.length - 500) {
-      const gap = cfg.minGap + rng() * (cfg.maxGap - cfg.minGap);
-      x += gap;
+    let guard = 0;
+    while (x < lengthPx - endBuffer) {
+      guard++;
+      if (guard > 6000) break; // proteção contra loop infinito
+      const gapBeats = diff.gapChoices[Math.floor(rng() * diff.gapChoices.length)];
+      x += gapBeats * pxPerBeat;
       const type = weightedPick(cfg.types, rng);
       const side = gravityDir === 1 ? 'floor' : 'ceiling';
 
-      if (type === 'gravityPortal' && sinceGravityFlip < 3) { x -= gap * 0.4; continue; }
+      if (type === 'gravityPortal' && sinceGravityFlip < 3) { x -= gapBeats * pxPerBeat * 0.5; continue; }
 
       switch (type) {
         case 'spike':
@@ -171,12 +195,12 @@
           gravityDir *= -1;
           obstacles.push({ type: 'portalGravity', x, dir: gravityDir });
           sinceGravityFlip = 0;
-          x += 30;
+          x += pxPerBeat * 0.5;
           break;
         case 'speedPortal': {
           const mult = rng() < 0.5 ? 0.78 : 1.4;
           obstacles.push({ type: 'portalSpeed', x, mult });
-          x += 30;
+          x += pxPerBeat * 0.5;
           sinceGravityFlip++;
           break;
         }
@@ -186,27 +210,88 @@
     return {
       id: cfg.id, name: cfg.name, bpm: cfg.bpm, baseSpeed: cfg.speed,
       palette: PALETTES[cfg.id % PALETTES.length],
-      obstacles, length: cfg.length,
+      obstacles, length: lengthPx, pxPerBeat,
     };
   }
 
-  const LEVELS = LEVEL_CONFIGS.map(buildLevel);
+  const LEVELS = {};
+  DIFFICULTY_KEYS.forEach((dk) => { LEVELS[dk] = LEVEL_CONFIGS.map((cfg) => buildLevel(cfg, dk)); });
+  let currentDifficultyKey = 'normal';
+  let activeDiff = DIFFICULTIES.normal;
 
   /* ---------------------------------------------------------------------
-     4. Progresso salvo (localStorage) — best % e fases desbloqueadas
+     4. Perfis de jogador e progresso salvo (localStorage, por nome)
      --------------------------------------------------------------------- */
-  const SAVE_KEY = 'geometry-game-progress-v1';
-  function loadProgress() {
+  const PROFILES_KEY = 'geometry-game-profiles-v1';
+  const OLD_PROGRESS_KEY = 'geometry-game-progress-v1'; // versão anterior, sem perfis
+
+  function emptyProgress() {
+    const p = { best: {}, unlocked: 1 };
+    DIFFICULTY_KEYS.forEach((dk) => { p.best[dk] = new Array(LEVEL_CONFIGS.length).fill(0); });
+    return p;
+  }
+  function loadProfilesStore() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(PROFILES_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) { /* ignora */ }
-    return { best: new Array(LEVELS.length).fill(0), unlocked: 1 };
+    return { active: null, profiles: {} };
   }
-  function saveProgress(p) {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(p)); } catch (e) { /* ignora */ }
+  function saveProfilesStore() {
+    try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profilesStore)); } catch (e) { /* ignora */ }
   }
-  let progress = loadProgress();
+  // se a pessoa já tinha progresso salvo na versão antiga (sem perfis), preserva
+  // esse progresso num perfil chamado "Jogador" em vez de perdê-lo.
+  function migrateOldProgressIfNeeded(store) {
+    if (Object.keys(store.profiles).length > 0) return store;
+    try {
+      const raw = localStorage.getItem(OLD_PROGRESS_KEY);
+      if (!raw) return store;
+      const old = JSON.parse(raw);
+      if (!old || !Array.isArray(old.best)) return store;
+      const migrated = emptyProgress();
+      old.best.forEach((v, i) => { if (i < migrated.best.normal.length) migrated.best.normal[i] = v; });
+      migrated.unlocked = old.unlocked || 1;
+      store.profiles['Jogador'] = migrated;
+      store.active = 'Jogador';
+    } catch (e) { /* ignora */ }
+    return store;
+  }
+
+  let profilesStore = migrateOldProgressIfNeeded(loadProfilesStore());
+  let currentProfileName = null;
+  let progress = emptyProgress();
+
+  function setActiveProfile(name) {
+    currentProfileName = name;
+    if (!profilesStore.profiles[name]) profilesStore.profiles[name] = emptyProgress();
+    progress = profilesStore.profiles[name];
+    profilesStore.active = name;
+    saveProfilesStore();
+    updatePlayerBadge();
+  }
+  function updatePlayerBadge() {
+    if (currentProfileName) {
+      $('player-name-label').textContent = currentProfileName;
+      playerBadgeEl.classList.remove('hidden');
+    } else {
+      playerBadgeEl.classList.add('hidden');
+    }
+  }
+  function renderExistingProfiles() {
+    const wrap = $('existing-profiles');
+    const names = Object.keys(profilesStore.profiles);
+    wrap.innerHTML = '';
+    wrap.classList.toggle('hidden', names.length === 0);
+    names.forEach((name) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'profile-chip';
+      chip.textContent = name;
+      chip.addEventListener('click', () => { setActiveProfile(name); goToMenu(); });
+      wrap.appendChild(chip);
+    });
+  }
 
   /* ---------------------------------------------------------------------
      5. Áudio procedural (sintetizado — sem arquivos externos)
@@ -296,7 +381,7 @@
   /* ---------------------------------------------------------------------
      6. Estado do jogo
      --------------------------------------------------------------------- */
-  const STATE = { MENU: 'menu', LEVELS: 'levels', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win' };
+  const STATE = { LOGIN: 'login', MENU: 'menu', LEVELS: 'levels', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win' };
   let state = STATE.MENU;
 
   let currentLevel = null;
@@ -328,10 +413,12 @@
     player.grounded = true; player.rotation = 0;
     triggered = new Set();
     particles = [];
+    Audio_.setBpm(currentLevel.bpm * speedMult); // ressincroniza a música com a velocidade atual
   }
 
   function startLevel(idx, practice) {
-    currentLevel = LEVELS[idx];
+    currentLevel = LEVELS[currentDifficultyKey][idx];
+    activeDiff = DIFFICULTIES[currentDifficultyKey];
     practiceMode = !!practice;
     attempts = 1;
     bestPercentRun = 0;
@@ -340,9 +427,10 @@
     state = STATE.PLAYING;
     showScreen(null);
     showHud(true);
+    playerBadgeEl.classList.add('hidden');
     practiceBannerEl.classList.toggle('hidden', !practiceMode);
     $('hud-attempts').textContent = attempts;
-    $('hud-best').textContent = Math.round((progress.best[idx] || 0)) + '%';
+    $('hud-best').textContent = Math.round((progress.best[currentDifficultyKey][idx] || 0)) + '%';
     Audio_.start(currentLevel.bpm);
     lastTime = performance.now();
     if (rafId) cancelAnimationFrame(rafId);
@@ -365,16 +453,15 @@
   function winLevel() {
     Audio_.stop();
     Audio_.winSfx();
-    const pct = 100;
-    if (pct > (progress.best[currentLevel.id] || 0)) {
-      progress.best[currentLevel.id] = pct;
-      progress.unlocked = Math.max(progress.unlocked, currentLevel.id + 2);
-      saveProgress(progress);
+    if (100 > (progress.best[currentDifficultyKey][currentLevel.id] || 0)) {
+      progress.best[currentDifficultyKey][currentLevel.id] = 100;
     }
+    progress.unlocked = Math.max(progress.unlocked, currentLevel.id + 2);
+    saveProfilesStore();
     const elapsed = ((performance.now() - runStartTime) / 1000).toFixed(1);
     $('win-attempts').textContent = attempts;
     $('win-time').textContent = elapsed + 's';
-    const hasNext = currentLevel.id + 1 < LEVELS.length;
+    const hasNext = currentLevel.id + 1 < LEVEL_CONFIGS.length;
     $('btn-next-level').classList.toggle('hidden', !hasNext);
     state = STATE.WIN;
     showHud(false);
@@ -423,7 +510,7 @@
     const px = distance + PLAYER_SIZE / 2;
     for (const o of currentLevel.obstacles) {
       if (o.type !== 'orb') continue;
-      if (Math.abs(o.x - px) < 26 && !triggered.has(obstacleId(o))) {
+      if (Math.abs(o.x - px) < activeDiff.orbRadius && !triggered.has(obstacleId(o))) {
         player.vy = dir * ORB_BOOST;
         triggered.add(obstacleId(o));
       }
@@ -450,6 +537,7 @@
   }
 
   window.addEventListener('keydown', (e) => {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return; // não captura teclas ao digitar nome
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); doJump(); }
     else if (e.code === 'Escape') { togglePause(); }
     else if (e.key === 'c' || e.key === 'C') { placeCheckpoint(); }
@@ -506,11 +594,12 @@
       if (o.type === 'spike') {
         const h = 32, w = 32;
         const oy = o.side === 'floor' ? gY - h : cY;
-        // hitbox levemente menor que o desenho (mais justo/agradável)
-        if (rectsOverlap(pRect.x + 6, pRect.y + 6, pRect.w - 12, pRect.h - 12, o.x, oy, w, h)) { die(); return; }
+        const m = activeDiff.hitboxSpike; // margem de tolerância depende da dificuldade
+        if (rectsOverlap(pRect.x + m, pRect.y + m, pRect.w - 2 * m, pRect.h - 2 * m, o.x, oy, w, h)) { die(); return; }
       } else if (o.type === 'block') {
         const oy = o.side === 'floor' ? gY - o.height : cY;
-        if (rectsOverlap(pRect.x + 4, pRect.y + 4, pRect.w - 8, pRect.h - 8, o.x, oy, o.width, o.height)) { die(); return; }
+        const m = activeDiff.hitboxBlock;
+        if (rectsOverlap(pRect.x + m, pRect.y + m, pRect.w - 2 * m, pRect.h - 2 * m, o.x, oy, o.width, o.height)) { die(); return; }
       } else if (o.type === 'pad') {
         const oy = o.side === 'floor' ? gY - 14 : cY;
         if (rectsOverlap(pRect.x, pRect.y, pRect.w, pRect.h, o.x - 18, oy, 36, 14)) {
@@ -528,6 +617,7 @@
       } else if (o.type === 'portalSpeed') {
         if (Math.abs(dx) < 16 && !triggered.has(obstacleId(o))) {
           speedMult = o.mult;
+          Audio_.setBpm(currentLevel.bpm * speedMult); // a trilha acelera/desacelera junto com o jogo
           triggered.add(obstacleId(o));
         }
       }
@@ -718,7 +808,7 @@
       showScreen('pause');
     } else if (state === STATE.PAUSED) {
       state = STATE.PLAYING;
-      Audio_.start(currentLevel.bpm);
+      Audio_.start(currentLevel.bpm * speedMult);
       showScreen(null);
     }
   }
@@ -728,6 +818,7 @@
     Audio_.stop();
     showHud(false);
     practiceBannerEl.classList.add('hidden');
+    updatePlayerBadge();
     showScreen('start');
   }
 
@@ -736,24 +827,33 @@
     Audio_.stop();
     showHud(false);
     practiceBannerEl.classList.add('hidden');
+    updatePlayerBadge();
+    syncDifficultyButtonsUI();
     renderLevelGrid();
     showScreen('levels');
+  }
+
+  function syncDifficultyButtonsUI() {
+    document.querySelectorAll('.diff-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.diff === currentDifficultyKey);
+    });
   }
 
   function renderLevelGrid() {
     const grid = $('level-grid');
     grid.innerHTML = '';
-    LEVELS.forEach((lvl, i) => {
+    LEVEL_CONFIGS.forEach((cfg, i) => {
+      const lvl = LEVELS[currentDifficultyKey][i];
       const unlocked = i < progress.unlocked;
       const card = document.createElement('button');
       card.className = 'level-card' + (unlocked ? '' : ' locked');
       card.style.setProperty('--lvl-accent', lvl.palette.accent);
       card.style.setProperty('--lvl-accent2', lvl.palette.accent2);
-      const best = Math.round(progress.best[i] || 0);
+      const best = Math.round(progress.best[currentDifficultyKey][i] || 0);
       card.innerHTML =
         '<span class="level-num">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="level-name">' + lvl.name + '</span>' +
-        '<span class="level-meta">' + lvl.bpm + ' BPM</span>' +
+        '<span class="level-meta">' + lvl.bpm + ' BPM · ' + lvl.obstacles.length + ' obstáculos</span>' +
         (unlocked
           ? '<span class="level-best">' + (best ? best + '%' : 'Não jogada') + '</span>'
           : '<span class="level-locked">🔒 Conclua a fase anterior</span>');
@@ -777,14 +877,14 @@
 
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-resume').addEventListener('click', togglePause);
-  $('btn-restart-pause').addEventListener('click', () => { state = STATE.PLAYING; showScreen(null); Audio_.start(currentLevel.bpm); resetRun(false); attempts = 1; $('hud-attempts').textContent = attempts; });
+  $('btn-restart-pause').addEventListener('click', () => { state = STATE.PLAYING; showScreen(null); resetRun(false); Audio_.start(currentLevel.bpm); attempts = 1; $('hud-attempts').textContent = attempts; });
   $('btn-menu-pause').addEventListener('click', goToMenu);
   $('btn-menu-win').addEventListener('click', goToMenu);
   $('btn-replay').addEventListener('click', () => startLevel(currentLevel.id, false));
 
-  $('btn-next-level') && $('btn-next-level').addEventListener('click', () => {
+  $('btn-next-level').addEventListener('click', () => {
     const next = currentLevel.id + 1;
-    if (next < LEVELS.length) startLevel(next, false); else goToLevelSelect();
+    if (next < LEVEL_CONFIGS.length) startLevel(next, false); else goToLevelSelect();
   });
 
   $('btn-mute').addEventListener('click', () => {
@@ -792,8 +892,44 @@
     $('btn-mute').textContent = muted ? '🔇' : '🔊';
   });
 
-  $('btn-back-levels') && $('btn-back-levels').addEventListener('click', goToMenu);
+  $('btn-back-levels').addEventListener('click', goToMenu);
 
-  // inicia em modo "menu"
-  showScreen('start');
+  document.querySelectorAll('.diff-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentDifficultyKey = btn.dataset.diff;
+      syncDifficultyButtonsUI();
+      renderLevelGrid();
+    });
+  });
+
+  // --- perfil de jogador ---
+  $('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('login-name-input');
+    let name = input.value.trim();
+    if (!name) name = 'Jogador';
+    name = name.slice(0, 18);
+    input.value = '';
+    setActiveProfile(name);
+    goToMenu();
+  });
+
+  $('btn-switch-profile').addEventListener('click', () => {
+    renderExistingProfiles();
+    showHud(false);
+    practiceBannerEl.classList.add('hidden');
+    playerBadgeEl.classList.add('hidden');
+    showScreen('login');
+  });
+
+  /* ---------------------------------------------------------------------
+     14. Inicialização
+     --------------------------------------------------------------------- */
+  renderExistingProfiles();
+  if (profilesStore.active && profilesStore.profiles[profilesStore.active]) {
+    setActiveProfile(profilesStore.active);
+    showScreen('start');
+  } else {
+    showScreen('login');
+  }
 })();
