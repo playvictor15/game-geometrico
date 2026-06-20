@@ -361,10 +361,124 @@ kbd {
 .level-card.locked:hover { transform: none; border-color: rgba(255, 255, 255, 0.1); }
 .level-locked { font-size: 10.5px; color: var(--muted); margin-top: 2px; position: relative; }
 
+/* ---------- Login / perfil de jogador ---------- */
+.profile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 380px;
+  margin-bottom: 18px;
+}
+.profile-chip {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+.profile-chip::before { content: '● '; color: var(--cyan); }
+.profile-chip:hover { border-color: var(--cyan); color: var(--cyan); transform: translateY(-1px); }
+.profile-chip:active { transform: scale(0.96); }
+
+.login-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.text-input {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 13px 16px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.text-input::placeholder { color: var(--muted); }
+.text-input:focus { border-color: var(--cyan); }
+
+/* ---------- Crachá do jogador ativo ---------- */
+.player-badge {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  background: rgba(10, 13, 26, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 7px 8px 7px 14px;
+  backdrop-filter: blur(4px);
+}
+.player-badge-icon { color: var(--cyan); font-size: 9px; }
+
+.link-btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.link-btn:hover { color: var(--cyan); background: rgba(45, 226, 230, 0.12); }
+
+/* ---------- Seletor de dificuldade ---------- */
+.difficulty-selector {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.diff-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.diff-btn:hover { color: var(--ink); }
+.diff-btn.active {
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  color: #07091a;
+}
+
 @media (max-width: 520px) {
   .hud-center { margin: 0 10px; }
   .hud-stat { padding: 4px 8px; }
   .instructions-card { padding: 14px 18px; }
+  .player-badge { font-size: 12px; padding: 6px 6px 6px 12px; }
+  .text-input { width: 170px; }
+  .diff-btn { padding: 7px 12px; font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
